@@ -1,7 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import engines.physics_models as pm
+import engines.physics_models 
 
 # ---------------------------------------------------------
 # Dynamic Sweeping Curve Generators for Chart Rendering
