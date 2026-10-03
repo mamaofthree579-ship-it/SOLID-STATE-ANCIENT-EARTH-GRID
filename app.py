@@ -8,7 +8,9 @@ from engines.physics_models import (
     simulate_puma_punku_h_block
 )
 
-# Core data range generator functions directly embedded for application rendering
+# ---------------------------------------------------------
+# Dynamic Sweeping Curve Generators for Chart Rendering
+# ---------------------------------------------------------
 def generate_tikal_lift_curve(catchment_area, height_m, max_rain=150):
     rain_range = np.linspace(10, max_rain, 100)
     lift_depths = []
@@ -33,7 +35,16 @@ def generate_puma_punku_curve(slot_depth):
         attenuations.append(att)
     return freq_range, np.array(attenuations)
 
-# App Configuration & Visual Styling Parameters
+def calculate_richter_pga_stress(magnitude, distance_km):
+    """Local conversion for PGA and Stress to decouple sidebar display limitations"""
+    pga_g = (10**(0.76 * magnitude - np.log10(distance_km) - 0.0025 * distance_km)) / 9.81
+    pga_g = np.clip(pga_g, 0.01, 2.5)
+    raw_stress_pa = 2800.0 * (pga_g * 9.81) * 3.5
+    return pga_g, raw_stress_pa
+
+# ---------------------------------------------------------
+# App Configuration & Page Settings
+# ---------------------------------------------------------
 st.set_page_config(page_title="SS-AEGIC Simulator", layout="wide")
 
 st.title("🌐 Solid-State Ancient Earth-Grid Simulation Core (SS-AEGIC)")
@@ -41,7 +52,9 @@ st.markdown("""
 This open-source dashboard strips away historical paradigms of primitive superstition and models ancient monumental engineering through the lens of **solid-state physics, geodetics, and trans-medium fluid dynamics**.
 """)
 
+# ---------------------------------------------------------
 # Sidebar Navigation Panel
+# ---------------------------------------------------------
 node = st.sidebar.selectbox("Select Engineering Node", [
     "Overview & Universal Lexicon",
     "Giza Resonator & Tuned Shafts (Egypt)",
@@ -51,6 +64,9 @@ node = st.sidebar.selectbox("Select Engineering Node", [
     "Puma Punku Acoustic Filter Array (Bolivia)"
 ])
 
+# ---------------------------------------------------------
+# Node 1: Overview & Universal Lexicon
+# ---------------------------------------------------------
 if node == "Overview & Universal Lexicon":
     st.header("📋 The Universal Engineering Lexicon")
     st.markdown("""
@@ -67,6 +83,9 @@ if node == "Overview & Universal Lexicon":
     
     st.info("💡 Select an engineering node in the sidebar to begin loading specialized fluid and wave mechanics simulators.")
 
+# ---------------------------------------------------------
+# Node 2: Giza Resonator & Tuned Shafts
+# ---------------------------------------------------------
 elif node == "Giza Resonator & Tuned Shafts (Egypt)":
     st.header("📐 Giza Tectonic Waveguide & Acoustic Interferometer")
     
@@ -82,7 +101,7 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         t, charge, static_p, f_nat, ref_coeff = simulate_giza_piezocore(mass, height, quartz)
         f_vort, f_helm = simulate_giza_shafts(0.2, wind, 250.0, 60.0)
         
-        st.metric("Tuned Core Core Frequency", f"{f_nat:.2f} Hz")
+        st.metric("Tuned Core Frequency", f"{f_nat:.2f} Hz")
         st.metric("Static Gravitational Compression Load", f"{static_p/1e3:.2f} kPa")
         st.metric("Heterojunction Energy Capture Ratio", f"{ref_coeff*100:.1f}%")
         st.metric("Helmholtz Air-Cavity Resonance", f"{f_helm:.2f} Hz")
@@ -95,8 +114,12 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         ax.grid(True, alpha=0.3)
         st.pyplot(fig)
 
+# ---------------------------------------------------------
+# Node 3: Quetzalcoatl Trans-Medium Vessel
+# ---------------------------------------------------------
 elif node == "Quetzalcoatl Trans-Medium Vessel":
     st.header("🛶 Quetzalcoatl Trans-Medium Wave Mechanics")
+    st.markdown("Air and water are a continuous medium; air is simply a lower-density version of water. This engine validates an adjustable geometry multi-hull configuration changing parameters to minimize wave resistance.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -123,6 +146,9 @@ elif node == "Quetzalcoatl Trans-Medium Vessel":
         ax.grid(True, alpha=0.2)
         st.pyplot(fig)
 
+# ---------------------------------------------------------
+# Node 4: Tikal Macrofluidic Ram Pump
+# ---------------------------------------------------------
 elif node == "Tikal Macrofluidic Ram Pump (Maya)":
     st.header("⚡ Tikal Macrofluidic Mass-Actuated Ram Pump")
     
@@ -152,11 +178,19 @@ elif node == "Tikal Macrofluidic Ram Pump (Maya)":
         ax.grid(True, alpha=0.2)
         st.pyplot(fig)
 
+# ---------------------------------------------------------
+# Node 5: Rapa Nui Grid & Concave Roadways
+# ---------------------------------------------------------
 elif node == "Rapa Nui Grid & Concave Roadways":
     st.header("🗿 Rapa Nui Groundwater Sieve & Road Waveguides")
+    st.markdown("""
+    This node evaluates the engineering models behind Easter Island's infrastructure, testing the 
+    self-correcting gravity dynamics of the concave walking roads and stone-tuff bio-resonators.
+    """)
     
     col1, col2 = st.columns(2)
     with col1:
+        st.subheader("System Control Parameters")
         s_mass = st.slider("Moai Transducer Column Mass (kg)", 5000, 80000, 15000, step=2000)
         radius = st.slider("Roadway Concave Geometry Radius (meters)", 1.5, 10.0, 3.5, step=0.5)
         tilt = st.slider("Dynamic Sway Walking Tilt Angle (Degrees)", 1.0, 15.0, 6.0, step=0.5)
@@ -168,8 +202,14 @@ elif node == "Rapa Nui Grid & Concave Roadways":
         st.metric("Concave Track Restoring Torquing Matrix", f"{torque/1e3:.2f} kN·m")
         st.metric("Critical System Tipping Threshold Limit", f"{crit:.1f} Degrees")
         
-        st.success(f"Stability Audit: Safe. The statue remains securely balanced inside the self-correcting gravity track (Concave limit threshold is {crit:.1f}°).")
+        if tilt < crit:
+            st.success(f"Stability Audit: SAFE. The statue remains securely balanced inside the self-correcting gravity track (Concave limit threshold is {crit:.1f}°).")
+        else:
+            st.error(f"Stability Audit: CRITICAL TILT. Center of mass has breached the D-shaped footing vectors. Structural failure imminent.")
 
+# ---------------------------------------------------------
+# Node 6: Puma Punku Acoustic Filter Array
+# ---------------------------------------------------------
 elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
     st.header("🧱 Puma Punku Andesite H-Block Interference Array")
     st.markdown("""
@@ -187,10 +227,12 @@ elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
         eq_dist = st.slider("Distance to Epicenter Fault Node (km)", 1.0, 50.0, 10.0, step=1.0)
         
     with col2:
-        # Dynamic Multi-Variable Simulation Execution
-        from engines.physics_models import simulate_puma_punku_richter_stress, generate_puma_punku_curve
         db_loss = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=test_freq, slot_depth_m=s_depth)
-        energy, pga, raw_stress, mit_stress, safety = simulate_puma_punku_richter_stress(eq_mag, eq_dist, test_freq, s_depth)
+        pga, raw_stress = calculate_richter_pga_stress(eq_mag, eq_dist)
+        
+        dampening_factor = 10**(-db_loss / 20.0)
+        mit_stress = raw_stress * dampening_factor
+        safety = 25.0e6 / max(mit_stress, 1.0)
         
         st.metric("Acoustic Amplitude Attenuation", f"{db_loss:.2f} dB")
         st.metric("Peak Ground Acceleration Vector (PGA)", f"{pga:.3f} g")
@@ -202,7 +244,6 @@ elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
         else:
             st.error(f"System Critical Stress Warning: Material failure risk. Safety Factor: {safety:.2f}x. Internal stress exceeds localized limits.")
         
-        # Phase Interference Frequency Curve Generation
         freq_x, atten_y = generate_puma_punku_curve(s_depth)
         
         fig, ax = plt.subplots(figsize=(6, 2.8))
