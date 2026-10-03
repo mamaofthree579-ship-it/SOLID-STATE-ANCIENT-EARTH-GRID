@@ -4,7 +4,8 @@ import numpy as np
 from engines.physics_models import (
     simulate_giza_piezocore, simulate_quetzalcoatl_hull,
     simulate_tikal_ram, simulate_rapa_nui_road,
-    simulate_mesoamerican_court, simulate_giza_shafts
+    simulate_mesoamerican_court, simulate_giza_shafts,
+    simulate_puma_punku_h_block
 )
 
 # Core data range generator functions directly embedded for application rendering
@@ -24,7 +25,15 @@ def generate_quetzalcoatl_drag_curve(velocity_knots):
         drag_forces.append(drag)
     return angles, np.array(drag_forces)
 
-# App Configuration
+def generate_puma_punku_curve(slot_depth):
+    freq_range = np.linspace(10, 500, 150)
+    attenuations = []
+    for f in freq_range:
+        att = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=f, slot_depth_m=slot_depth)
+        attenuations.append(att)
+    return freq_range, np.array(attenuations)
+
+# App Configuration & Visual Styling Parameters
 st.set_page_config(page_title="SS-AEGIC Simulator", layout="wide")
 
 st.title("🌐 Solid-State Ancient Earth-Grid Simulation Core (SS-AEGIC)")
@@ -38,7 +47,8 @@ node = st.sidebar.selectbox("Select Engineering Node", [
     "Giza Resonator & Tuned Shafts (Egypt)",
     "Quetzalcoatl Trans-Medium Vessel",
     "Tikal Macrofluidic Ram Pump (Maya)",
-    "Rapa Nui Grid & Concave Roadways"
+    "Rapa Nui Grid & Concave Roadways",
+    "Puma Punku Acoustic Filter Array (Bolivia)"
 ])
 
 if node == "Overview & Universal Lexicon":
@@ -77,7 +87,6 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         st.metric("Heterojunction Energy Capture Ratio", f"{ref_coeff*100:.1f}%")
         st.metric("Helmholtz Air-Cavity Resonance", f"{f_helm:.2f} Hz")
         
-        # Plotting active EM production curve
         fig, ax = plt.subplots(figsize=(6, 3))
         ax.plot(t, charge * 1e12, color='#E67E22', linewidth=2)
         ax.set_title("Piezoelectric Polarization Field Output over Time")
@@ -88,7 +97,6 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
 
 elif node == "Quetzalcoatl Trans-Medium Vessel":
     st.header("🛶 Quetzalcoatl Trans-Medium Wave Mechanics")
-    st.markdown("Air and water are a continuous medium; air is simply a lower-density version of water. This engine validates an adjustable geometry multi-hull configuration changing parameters to minimize wave resistance.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -103,7 +111,6 @@ elif node == "Quetzalcoatl Trans-Medium Vessel":
         st.metric("Calculated Froude Index (Fr)", f"{fr:.3f}")
         st.metric("Net Dynamic Wave Resistance", f"{drag:.2f} Newtons")
         
-        # New Hydrodynamic Sweep Chart
         angles_x, drag_y = generate_quetzalcoatl_drag_curve(knots)
         
         fig, ax = plt.subplots(figsize=(6, 3))
@@ -133,7 +140,6 @@ elif node == "Tikal Macrofluidic Ram Pump (Maya)":
         st.metric("Transient Water-Hammer Shockwave Pressure", f"{hammer/1e6:.2f} MPa")
         st.metric("Hydro-Pneumatic Fluid Elevation Lift", f"{lift:.2f} meters")
         
-        # New Interactive Chart Generation
         rain_x, lift_y = generate_tikal_lift_curve(area, p_height, max_rain=150)
         
         fig, ax = plt.subplots(figsize=(6, 3))
@@ -157,10 +163,39 @@ elif node == "Rapa Nui Grid & Concave Roadways":
         
     with col2:
         pe, torque, crit = simulate_rapa_nui_road(s_mass, radius, tilt)
-        f_court, comp, loss = simulate_mesoamerican_court(96, 8, 30)
         
         st.metric("Swaying Pendulum Potential Energy", f"{pe/1e3:.2f} kJ")
         st.metric("Concave Track Restoring Torquing Matrix", f"{torque/1e3:.2f} kN·m")
         st.metric("Critical System Tipping Threshold Limit", f"{crit:.1f} Degrees")
         
         st.success(f"Stability Audit: Safe. The statue remains securely balanced inside the self-correcting gravity track (Concave limit threshold is {crit:.1f}°).")
+
+elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
+    st.header("🧱 Puma Punku Andesite H-Block Interference Array")
+    st.markdown("""
+    By analyzing the raw material geometries of Puma Punku's interlocking H-blocks, this simulator tests the hypothesis that the structures function as a **solid-state acoustic low-pass filter array** designed for destructive phase cancellation of earth seismic tremors.
+    """)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Lithic Structural Variables")
+        s_depth = st.slider("Interlocking Cavity Slot Depth (Meters)", 0.05, 0.50, 0.15, step=0.01)
+        test_freq = st.slider("Target Tectonic Frequency to Audit (Hz)", 10, 500, 120, step=5)
+        
+    with col2:
+        db_loss = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=test_freq, slot_depth_m=s_depth)
+        
+        st.metric("Acoustic Amplitude Attenuation", f"{db_loss:.2f} dB")
+        
+        # Phase Interference Frequency Curve Generation
+        freq_x, atten_y = generate_puma_punku_curve(s_depth)
+        
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(freq_x, atten_y, color='#9B59B6', linewidth=2.5, label='Attenuation Profile')
+        ax.axvline(x=test_freq, color='#E74C3C', linestyle='--', label=f'Audited Frequency ({test_freq} Hz)')
+        ax.set_title("Seismic Vibration Cancellation vs. Wave Frequency")
+        ax.set_xlabel("Bedrock Seismic Frequency (Hz)")
+        ax.set_ylabel("Dampening Effectiveness (Decibels Loss)")
+        ax.legend(loc='upper right', fontsize='small')
+        ax.grid(True, alpha=0.2)
+        st.pyplot(fig)
