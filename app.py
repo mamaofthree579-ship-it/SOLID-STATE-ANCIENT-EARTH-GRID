@@ -182,15 +182,30 @@ elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
         s_depth = st.slider("Interlocking Cavity Slot Depth (Meters)", 0.05, 0.50, 0.15, step=0.01)
         test_freq = st.slider("Target Tectonic Frequency to Audit (Hz)", 10, 500, 120, step=5)
         
+        st.subheader("Richter Tectonic Force Actuator")
+        eq_mag = st.slider("Earthquake Magnitude (Richter Scale)", 4.0, 9.5, 7.5, step=0.1)
+        eq_dist = st.slider("Distance to Epicenter Fault Node (km)", 1.0, 50.0, 10.0, step=1.0)
+        
     with col2:
+        # Dynamic Multi-Variable Simulation Execution
+        from engines.physics_models import simulate_puma_punku_richter_stress, generate_puma_punku_curve
         db_loss = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=test_freq, slot_depth_m=s_depth)
+        energy, pga, raw_stress, mit_stress, safety = simulate_puma_punku_richter_stress(eq_mag, eq_dist, test_freq, s_depth)
         
         st.metric("Acoustic Amplitude Attenuation", f"{db_loss:.2f} dB")
+        st.metric("Peak Ground Acceleration Vector (PGA)", f"{pga:.3f} g")
+        st.metric("Raw Unmitigated Tectonic Stress", f"{raw_stress / 1e3:.2f} kPa")
+        st.metric("Mitigated Structural Outflow Stress", f"{mit_stress / 1e3:.2f} kPa")
+        
+        if safety > 1.0:
+            st.success(f"System Operational Integrity Matrix: SAFE. Structural Safety Factor: {safety:.2f}x above material yield threshold.")
+        else:
+            st.error(f"System Critical Stress Warning: Material failure risk. Safety Factor: {safety:.2f}x. Internal stress exceeds localized limits.")
         
         # Phase Interference Frequency Curve Generation
         freq_x, atten_y = generate_puma_punku_curve(s_depth)
         
-        fig, ax = plt.subplots(figsize=(6, 3))
+        fig, ax = plt.subplots(figsize=(6, 2.8))
         ax.plot(freq_x, atten_y, color='#9B59B6', linewidth=2.5, label='Attenuation Profile')
         ax.axvline(x=test_freq, color='#E74C3C', linestyle='--', label=f'Audited Frequency ({test_freq} Hz)')
         ax.set_title("Seismic Vibration Cancellation vs. Wave Frequency")
