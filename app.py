@@ -36,25 +36,37 @@ if node == "Overview & Universal Lexicon":
         {"Traditional Archeology Label": "Ritual / Chant / Legend", "Solid-State Engineering Equivalent": "System Frequency Calibration / Operational Manual"}
     ])
 
-elif node == "Giza Resonator & Tuned Shafts (Egypt)":
-    st.header("📐 Giza Tectonic Waveguide & Acoustic Interferometer")
+elif node == "Tikal Macrofluidic Ram Pump (Maya)":
+    st.header("⚡ Tikal Macrofluidic Mass-Actuated Ram Pump")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns()
     with col1:
         st.subheader("System Control Parameters")
-        mass = st.slider("Granite Core Mass Loading (Tonnes)", 10000, 100000, 60000, step=5000)
-        height = st.slider("Core Vertical Matrix Height (Meters)", 3.0, 15.0, 5.8, step=0.1)
-        quartz = st.slider("Quartz Crystalline Ratio (SiO2 %)", 0.05, 0.30, 0.15, step=0.01)
-        wind = st.slider("External Air-Shaft Wind Speed (m/s)", 2.0, 25.0, 12.0, step=0.5)
+        area = st.slider("Pluvial Catchment Basin Area (m²)", 500, 5000, 2500, step=250)
+        rain = st.slider("Monsoonal Rainfall Rate (mm/hour)", 10, 150, 75, step=5)
+        p_height = st.slider("Pyramid Mass Actuator Height (Meters)", 10, 80, 47)
         
     with col2:
-        t, charge, static_p, f_nat, ref_coeff = simulate_giza_piezocore(mass, height, quartz)
-        f_vort, f_helm = simulate_giza_shafts(0.2, wind, 250.0, 60.0)
+        mass, hammer, lift = simulate_tikal_ram(area, rain, p_height)
         
-        st.metric("Tuned Core Core Frequency", f"{f_nat:.2f} Hz")
-        st.metric("Static Gravitational Compression Load", f"{static_p/1e3:.2f} kPa")
-        st.metric("Heterojunction Energy Capture Ratio", f"{ref_coeff*100:.1f}%")
-        st.metric("Helmholtz Air-Cavity Resonance", f"{f_helm:.2f} Hz")
+        st.metric("Total Pyramid Structural Mass Action", f"{mass/1e6:.3f} Megatonnes")
+        st.metric("Transient Water-Hammer Shockwave Pressure", f"{hammer/1e6:.2f} MPa")
+        st.metric("Hydro-Pneumatic Fluid Elevation Lift", f"{lift:.2f} meters")
+        
+        # New Interactive Chart Generation
+        from engines.physics_models import generate_tikal_lift_curve
+        rain_x, lift_y = generate_tikal_lift_curve(area, p_height, max_rain=150)
+        
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(rain_x, lift_y, color='#1ABC9C', linewidth=2.5, label='Calculated Fluid Lift')
+        ax.axvline(x=rain, color='#E74C3C', linestyle='--', label=f'Current Storm Event ({rain} mm/hr)')
+        ax.set_title("Fluid Head Lift Vector vs. Monsoonal Intensity")
+        ax.set_xlabel("Rainfall Rate (mm / hour)")
+        ax.set_ylabel("Maximum Vertical Water Lift (Meters)")
+        ax.legend(loc='upper left', fontsize='small')
+        ax.grid(True, alpha=0.2)
+        st.pyplot(fig)
+
         
         # Plotting the active EM production curve
         fig, ax = plt.subplots(figsize=(6, 2.5))
