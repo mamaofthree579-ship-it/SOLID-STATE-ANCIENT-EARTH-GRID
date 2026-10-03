@@ -80,3 +80,31 @@ def simulate_giza_shafts(aperture_d, wind_speed, cavity_vol, shaft_len):
     area_shaft = 0.045
     f_helmholtz = (C_AIR / (2.0 * np.pi)) * np.sqrt(area_shaft / (cavity_vol * shaft_len))
     return f_vortex, f_helmholtz
+
+def generate_tikal_lift_curve(catchment_area, height_m, max_rain=150):
+    """
+    Generates an array of fluid height lifts across a sweeping rainfall spectrum 
+    to visualize the dynamic efficiency scale of the mass-actuated ram pump.
+    """
+    rain_range = np.linspace(10, max_rain, 100)
+    lift_depths = []
+    
+    for r in rain_range:
+        _, _, lift_m = simulate_tikal_ram(catchment_area, r, height_m)
+        lift_depths.append(lift_m)
+        
+    return rain_range, np.array(lift_depths)
+
+def generate_quetzalcoatl_drag_curve(velocity_knots):
+    """
+    Generates a comparison array modeling structural drag across a full 45-degree 
+    hull articulation sweep to isolate the exact point of fluid impedance matching.
+    """
+    angles = np.linspace(0, 45, 100)
+    drag_forces = []
+    
+    for a in angles:
+        _, _, drag = simulate_quetzalcoatl_hull(velocity_knots, a)
+        drag_forces.append(drag)
+        
+    return angles, np.array(drag_forces)
