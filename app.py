@@ -79,10 +79,10 @@ elif node == "Tikal Macrofluidic Ram Pump (Maya)":
 
 elif node == "Quetzalcoatl Trans-Medium Vessel":
     st.header("🛶 Quetzalcoatl Trans-Medium Wave Mechanics")
-    st.markdown("Air and water are a continuous medium; air is simply a lower-density version of water. This engine validates an adjustable geometry multi-hull configuration changing parameters to minimize wave resistance.")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns()
     with col1:
+        st.subheader("Velocity & Articulation Anchors")
         knots = st.slider("Vessel Velocity (Knots)", 2, 25, 12)
         tilt = st.slider("Serpentine Hull Articulation Angle (Degrees)", 0.0, 45.0, 22.5, step=2.5)
         
@@ -93,7 +93,19 @@ elif node == "Quetzalcoatl Trans-Medium Vessel":
         st.metric("Calculated Froude Index (Fr)", f"{fr:.3f}")
         st.metric("Net Dynamic Wave Resistance", f"{drag:.2f} Newtons")
         
-        st.info("💡 Adjusting the hull articulation angle allows the ship to change its effective Froude profile, optimizing kinetic energy capture across shifting fluid phases.")
+        # New Hydrodynamic Sweep Chart
+        from engines.physics_models import generate_quetzalcoatl_drag_curve
+        angles_x, drag_y = generate_quetzalcoatl_drag_curve(knots)
+        
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(angles_x, drag_y / 1e3, color='#2980B9', linewidth=2.5, label='Net Drag Sweep')
+        ax.axvline(x=tilt, color='#E67E22', linestyle='--', label=f'Active Hull Alignment ({tilt}°)')
+        ax.set_title("Wave Drag Attenuation via Serpentine Geometry Adjustments")
+        ax.set_xlabel("Hull Articulation Shift (Degrees)")
+        ax.set_ylabel("Total Dynamic Resistance (Kilo-Newtons)")
+        ax.legend(loc='upper right', fontsize='small')
+        ax.grid(True, alpha=0.2)
+        st.pyplot(fig)
 
 elif node == "Tikal Macrofluidic Ram Pump (Maya)":
     st.header("⚡ Tikal Macrofluidic Mass-Actuated Ram Pump")
