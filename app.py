@@ -1,16 +1,92 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import engines.physics_models 
+
+# =========================================================
+# THE SOLID-STATE EARTH GRID PHYSICS SIMULATION ENGINE
+# =========================================================
+# Core Thermodynamic and Solid-State Physical Constants
+RHO_WATER = 1000.0
+RHO_AIR = 1.2
+BULK_MODULUS_WATER = 2.2e9
+C_AIR = 348.0
+ST_NUM = 0.21
+DENSITY_GRANITE = 2700.0
+DENSITY_LIMESTONE = 2500.0
+VEL_LIMESTONE = 2500.0
+VEL_GRANITE = 5000.0
+D_33_QUARTZ = 2.3e-12
+
+def simulate_giza_piezocore(mass_tonnes, height_m, quartz_ratio=0.15):
+    mass_kg = mass_tonnes * 1000.0
+    area_base = mass_kg / (DENSITY_GRANITE * height_m)
+    static_load_pa = (mass_kg * 9.81) / area_base
+    f_natural = VEL_GRANITE / (2.0 * height_m)
+    z1 = DENSITY_GRANITE * VEL_LIMESTONE
+    z2 = DENSITY_GRANITE * VEL_GRANITE
+    reflection_coeff = (z2 - z1) / (z2 + z1)
+    
+    t = np.linspace(0, 2, 500)
+    seismic_ripple = 5000.0 * np.sin(2.0 * np.pi * 1.5 * t)
+    total_stress = static_load_pa + seismic_ripple
+    charge_density = D_33_QUARTZ * total_stress * quartz_ratio
+    return t, charge_density, static_load_pa, f_natural, reflection_coeff
+
+def simulate_quetzalcoatl_hull(velocity_knots, articulation_deg):
+    v_ms = velocity_knots * 0.51444
+    l_nominal = 15.0
+    l_effective = l_nominal * np.cos(np.radians(articulation_deg))
+    froude_number = v_ms / np.sqrt(9.81 * l_effective)
+    base_cd = 0.05
+    wave_cd = 0.25 * (froude_number ** 4)
+    if articulation_deg > 0:
+        wave_cd *= np.clip(1.0 - (articulation_deg / 90.0), 0.5, 1.0)
+    total_drag = 0.5 * RHO_WATER * (v_ms**2) * l_effective * (base_cd + wave_cd)
+    return l_effective, froude_number, total_drag
+
+def simulate_tikal_ram(catchment_area, rainfall_mm_hr, height_m):
+    v_rain = (rainfall_mm_hr / 1000.0) / 3600.0
+    q_influx = catchment_area * v_rain
+    mass_pyramid = (1.0/3.0) * catchment_area * height_m * DENSITY_LIMESTONE
+    static_p = (mass_pyramid * 9.81) / catchment_area
+    v_fluid = q_influx / 0.5
+    c_wave = np.sqrt(BULK_MODULUS_WATER / RHO_WATER)
+    delta_p_hammer = RHO_WATER * c_wave * v_fluid
+    total_p = static_p + delta_p_hammer
+    lift_m = total_p / (RHO_WATER * 9.81)
+    return mass_pyramid, delta_p_hammer, lift_m
+
+def simulate_rapa_nui_road(statue_mass_kg, road_radius, tilt_deg):
+    theta_rad = np.radians(tilt_deg)
+    h_com = 1.8
+    pe_max = statue_mass_kg * 9.81 * h_com * (1.0 - np.cos(theta_rad))
+    restoring_force = statue_mass_kg * 9.81 * np.sin(np.arctan(1.0 / road_radius))
+    restoring_torque = restoring_force * h_com
+    critical_tilt = np.degrees(np.arctan(0.6 / h_com))
+    return pe_max, restoring_torque, critical_tilt
+
+def simulate_giza_shafts(aperture_d, wind_speed, cavity_vol, shaft_len):
+    f_vortex = (ST_NUM * wind_speed) / aperture_d
+    area_shaft = 0.045
+    f_helmholtz = (C_AIR / (2.0 * np.pi)) * np.sqrt(area_shaft / (cavity_vol * shaft_len))
+    return f_vortex, f_helmholtz
+
+def simulate_puma_punku_h_block(seismic_amplitude, frequency_hz, slot_depth_m=0.15):
+    velocity_andesite = 6000.0
+    wavelength = velocity_andesite / max(frequency_hz, 1.0)
+    phase_shift_rad = (2.0 * np.pi * slot_depth_m) / wavelength
+    cancellation_efficiency = np.abs(np.sin(phase_shift_rad))
+    attenuation_db = -20.0 * np.log10(max(1.0 - cancellation_efficiency, 1e-2))
+    return attenuation_db
 
 # ---------------------------------------------------------
-# Dynamic Sweeping Curve Generators for Chart Rendering
+# Dynamic Chart Range Generators
 # ---------------------------------------------------------
 def generate_tikal_lift_curve(catchment_area, height_m, max_rain=150):
     rain_range = np.linspace(10, max_rain, 100)
     lift_depths = []
     for r in rain_range:
-        _, _, lift_m = pm.simulate_tikal_ram(catchment_area, r, height_m)
+        _, _, lift_m = simulate_tikal_ram(catchment_area, r, height_m)
         lift_depths.append(lift_m)
     return rain_range, np.array(lift_depths)
 
@@ -18,7 +94,7 @@ def generate_quetzalcoatl_drag_curve(velocity_knots):
     angles = np.linspace(0, 45, 100)
     drag_forces = []
     for a in angles:
-        _, _, drag = pm.simulate_quetzalcoatl_hull(velocity_knots, a)
+        _, _, drag = simulate_quetzalcoatl_hull(velocity_knots, a)
         drag_forces.append(drag)
     return angles, np.array(drag_forces)
 
@@ -26,7 +102,7 @@ def generate_puma_punku_curve(slot_depth):
     freq_range = np.linspace(10, 500, 150)
     attenuations = []
     for f in freq_range:
-        att = pm.simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=f, slot_depth_m=slot_depth)
+        att = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=f, slot_depth_m=slot_depth)
         attenuations.append(att)
     return freq_range, np.array(attenuations)
 
@@ -35,9 +111,8 @@ def calculate_richter_pga_stress(magnitude, distance_km):
     pga_g = np.clip(pga_g, 0.01, 2.5)
     raw_stress_pa = 2800.0 * (pga_g * 9.81) * 3.5
     return pga_g, raw_stress_pa
-
 # ---------------------------------------------------------
-# App Configuration & Page Settings
+# Streamlit Layout User Interface Configuration
 # ---------------------------------------------------------
 st.set_page_config(page_title="SS-AEGIC Simulator", layout="wide")
 
@@ -80,8 +155,8 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         wind = st.slider("External Air-Shaft Wind Speed (m/s)", 2.0, 25.0, 12.0, step=0.5)
         
     with col2:
-        t, charge, static_p, f_nat, ref_coeff = pm.simulate_giza_piezocore(mass, height, quartz)
-        f_vort, f_helm = pm.simulate_giza_shafts(0.2, wind, 250.0, 60.0)
+        t, charge, static_p, f_nat, ref_coeff = simulate_giza_piezocore(mass, height, quartz)
+        f_vort, f_helm = simulate_giza_shafts(0.2, wind, 250.0, 60.0)
         st.metric("Tuned Core Frequency", f"{f_nat:.2f} Hz")
         st.metric("Static Gravitational Compression Load", f"{static_p/1e3:.2f} kPa")
         st.metric("Heterojunction Energy Capture Ratio", f"{ref_coeff*100:.1f}%")
@@ -92,7 +167,7 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         ax.set_title("Piezoelectric Polarization Field Output over Time")
         ax.set_xlabel("Seismic Period Window (Seconds)")
         ax.set_ylabel("Charge Density (pC/m²)")
-        ax.grid(True, alpha=0.3)
+        ax.grid(True, alpha=0.2)
         st.pyplot(fig)
 
 # Node 3: Quetzalcoatl Trans-Medium Vessel
@@ -105,7 +180,7 @@ elif node == "Quetzalcoatl Trans-Medium Vessel":
         tilt = st.slider("Serpentine Hull Articulation Angle (Degrees)", 0.0, 45.0, 22.5, step=2.5)
         
     with col2:
-        l_eff, fr, drag = pm.simulate_quetzalcoatl_hull(knots, tilt)
+        l_eff, fr, drag = simulate_quetzalcoatl_hull(knots, tilt)
         st.metric("Effective Waterline Footprint", f"{l_eff:.2f} meters")
         st.metric("Calculated Froude Index (Fr)", f"{fr:.3f}")
         st.metric("Net Dynamic Wave Resistance", f"{drag:.2f} Newtons")
@@ -131,7 +206,7 @@ elif node == "Tikal Macrofluidic Ram Pump (Maya)":
         p_height = st.slider("Pyramid Mass Actuator Height (Meters)", 10, 80, 47)
         
     with col2:
-        mass, hammer, lift = pm.simulate_tikal_ram(area, rain, p_height)
+        mass, hammer, lift = simulate_tikal_ram(area, rain, p_height)
         st.metric("Total Pyramid Structural Mass Action", f"{mass/1e6:.3f} Megatonnes")
         st.metric("Transient Water-Hammer Shockwave Pressure", f"{hammer/1e6:.2f} MPa")
         st.metric("Hydro-Pneumatic Fluid Elevation Lift", f"{lift:.2f} meters")
@@ -157,7 +232,7 @@ elif node == "Rapa Nui Grid & Concave Roadways":
         tilt = st.slider("Dynamic Sway Walking Tilt Angle (Degrees)", 1.0, 15.0, 6.0, step=0.5)
         
     with col2:
-        pe, torque, crit = pm.simulate_rapa_nui_road(s_mass, radius, tilt)
+        pe, torque, crit = simulate_rapa_nui_road(s_mass, radius, tilt)
         st.metric("Swaying Pendulum Potential Energy", f"{pe/1e3:.2f} kJ")
         st.metric("Concave Track Restoring Torquing Matrix", f"{torque/1e3:.2f} kN·m")
         st.metric("Critical System Tipping Threshold Limit", f"{crit:.1f} Degrees")
@@ -179,7 +254,7 @@ elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
         eq_dist = st.slider("Distance to Epicenter Fault Node (km)", 1.0, 50.0, 10.0, step=1.0)
         
     with col2:
-        db_loss = pm.simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=test_freq, slot_depth_m=s_depth)
+        db_loss = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=test_freq, slot_depth_m=s_depth)
         pga, raw_stress = calculate_richter_pga_stress(eq_mag, eq_dist)
         
         dampening_factor = 10**(-db_loss / 20.0)
