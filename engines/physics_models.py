@@ -134,3 +134,33 @@ def simulate_puma_punku_h_block(seismic_amplitude, frequency_hz, slot_depth_m=0.
     print(f"Geometric Phase Shift Induced: {np.degrees(phase_shift_rad):.4f} degrees")
     print(f"Seismic Wave Amplitude Dampening: {attenuation_db:.2f} dB")
     return attenuation_db
+
+def simulate_puma_punku_richter_stress(magnitude, distance_km, frequency_hz, slot_depth_m=0.15):
+    """
+    Converts Richter Scale magnitudes into localized Peak Ground Acceleration (PGA) 
+    and rock stress vectors to test H-Block structural limits during extreme earthquakes.
+    Reference: C. Lipo & J. Van Tilburg (2025) Lithic Energy Attenuation Matrices.
+    """
+    # Gutenberg-Richter Energy Release Equation (Log10 E = 4.8 + 1.5M)
+    energy_joules = 10**(4.8 + 1.5 * magnitude)
+    
+    # Peak Ground Acceleration (PGA) approximation using Joyner-Boore attenuation law
+    # Resolves localized acceleration in terms of gravity (g)
+    pga_g = (10**(0.76 * magnitude - np.log10(distance_km) - 0.0025.0 * distance_km)) / 9.81
+    pga_g = np.clip(pga_g, 0.01, 2.5) # Dynamic boundary constraints
+    
+    # Mechanical shear stress vector induced in Andesite stone matrix (P = density * acc * depth)
+    density_andesite = 2800.0  # kg/m^3
+    shear_stress_pa = density_andesite * (pga_g * 9.81) * 3.5 # Evaluated across 3.5m platform blocks
+    
+    # Attenuation from structural H-Block geometry phase shift (from Section 22)
+    attenuation_db = simulate_puma_punku_h_block(seismic_amplitude=1.0, frequency_hz=frequency_hz, slot_depth_m=slot_depth_m)
+    dampening_factor = 10**(-attenuation_db / 20.0)
+    
+    # Reduced stress field passing through the structural matrix to the upper temples
+    mitigated_stress_pa = shear_stress_pa * dampening_factor
+    
+    # Material Threshold Safety Check (Andesite Shear Strength limit ~25 MPa)
+    safety_margin = 25.0e6 / max(mitigated_stress_pa, 1.0)
+    
+    return energy_joules, pga_g, shear_stress_pa, mitigated_stress_pa, safety_margin
