@@ -1,0 +1,18 @@
+{
+  "fluid_dynamics": {
+    "rho_water": 1000.0,
+    "rho_air": 1.2,
+    "bulk_modulus_water": 2.2e9,
+    "c_air_28c": 348.0,
+    "strouhal_number": 0.21
+  },
+  "geology": {
+    "density_granite": 2700.0,
+    "density_limestone": 2500.0,
+    "density_tuff": 1800.0,
+    "density_scoria": 1400.0,
+    "velocity_limestone": 2500.0,
+    "velocity_granite": 5000.0,
+    "d_33_quartz": 2.3e-12
+  }
+}
