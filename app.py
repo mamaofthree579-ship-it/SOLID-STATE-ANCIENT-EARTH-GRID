@@ -1,6 +1,8 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import io
 
 # =========================================================
 # THE SOLID-STATE EARTH GRID PHYSICS SIMULATION ENGINE
@@ -79,6 +81,30 @@ def simulate_puma_punku_h_block(seismic_amplitude, frequency_hz, slot_depth_m=0.
     attenuation_db = -20.0 * np.log10(max(1.0 - cancellation_efficiency, 1e-2))
     return attenuation_db
 
+def simulate_teotihuacan_hydro_grid(avenue_length_m, slope_deg, initial_flow_m3s, restrictions_count):
+    """
+    Models the Avenue of the Dead at Teotihuacán as a Macrofluidic Channel Network.
+    Calculates Venturi pressure gradients and velocity drops across stone restriction dams.
+    """
+    g = 9.81
+    theta = np.radians(slope_deg)
+    
+    # Hydraulic acceleration down the baseline gradient
+    theoretical_velocity = np.sqrt(2.0 * g * avenue_length_m * np.sin(theta))
+    
+    # Venturi restriction factor based on stone dam cross-sections
+    area_initial = 12.0 # 12 square meters baseline canal width
+    area_restricted = max(area_initial - (restrictions_count * 1.5), 1.5)
+    
+    v_initial = initial_flow_m3s / area_initial
+    v_restricted = initial_flow_m3s / area_restricted
+    
+    # Bernoulli equation for localized fluid pressure drop (Venturi effect)
+    delta_pressure_pa = 0.5 * RHO_WATER * (v_restricted**2 - v_initial**2)
+    electro_osmotic_potential_mv = delta_pressure_pa * 1.2e-4 # Electro-kinetic conversion scalar
+    
+    return theoretical_velocity, v_restricted, delta_pressure_pa, electro_osmotic_potential_mv
+
 # ---------------------------------------------------------
 # Dynamic Chart Range Generators
 # ---------------------------------------------------------
@@ -106,11 +132,20 @@ def generate_puma_punku_curve(slot_depth):
         attenuations.append(att)
     return freq_range, np.array(attenuations)
 
+def generate_teotihuacan_pressure_curve(avenue_length, slope, restrictions):
+    flow_range = np.linspace(5, 100, 100)
+    pressures = []
+    for q in flow_range:
+        _, _, p_drop, _ = simulate_teotihuacan_hydro_grid(avenue_length, slope, q, restrictions)
+        pressures.append(p_drop / 1e3) # Store in kPa
+    return flow_range, np.array(pressures)
+
 def calculate_richter_pga_stress(magnitude, distance_km):
     pga_g = (10**(0.76 * magnitude - np.log10(distance_km) - 0.0025 * distance_km)) / 9.81
     pga_g = np.clip(pga_g, 0.01, 2.5)
     raw_stress_pa = 2800.0 * (pga_g * 9.81) * 3.5
     return pga_g, raw_stress_pa
+
 # ---------------------------------------------------------
 # Streamlit Layout User Interface Configuration
 # ---------------------------------------------------------
@@ -128,7 +163,8 @@ node = st.sidebar.selectbox("Select Engineering Node", [
     "Quetzalcoatl Trans-Medium Vessel",
     "Tikal Macrofluidic Ram Pump (Maya)",
     "Rapa Nui Grid & Concave Roadways",
-    "Puma Punku Acoustic Filter Array (Bolivia)"
+    "Puma Punku Acoustic Filter Array (Bolivia)",
+    "Teotihuacán Hydro-Electric Matrix (Mexico)"
 ])
 
 # Node 1: Overview & Universal Lexicon
@@ -169,6 +205,12 @@ elif node == "Giza Resonator & Tuned Shafts (Egypt)":
         ax.set_ylabel("Charge Density (pC/m²)")
         ax.grid(True, alpha=0.2)
         st.pyplot(fig)
+        
+        # Open Source Field Data Logging Block
+        df_log = pd.DataFrame({"Time_s": t, "ChargeDensity_pC_m2": charge * 1e12})
+        csv_buffer = io.StringIO()
+        df_log.to_csv(csv_buffer, index=False)
+        st.download_button("📥 Export Simulation Log (CSV)", data=csv_buffer.getvalue(), file_name="giza_piezo_field_log.csv", mime="text/csv")
 
 # Node 3: Quetzalcoatl Trans-Medium Vessel
 elif node == "Quetzalcoatl Trans-Medium Vessel":
@@ -278,5 +320,36 @@ elif node == "Puma Punku Acoustic Filter Array (Bolivia)":
         ax.set_title("Seismic Vibration Cancellation vs. Wave Frequency")
         ax.set_xlabel("Bedrock Seismic Frequency (Hz)")
         ax.set_ylabel("Dampening Effectiveness (Decibels Loss)")
+        ax.grid(True, alpha=0.2)
+        st.pyplot(fig)
+
+# Node 7: Teotihuacán Hydro-Electric Matrix
+elif node == "Teotihuacán Hydro-Electric Matrix (Mexico)":
+    st.header("🌊 Teotihuacán Avenue of the Dead: Macrofluidic Pressure Grid")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Geodetic Channel Infrastructure")
+        av_len = st.slider("Avenue Axial Length (Meters)", 500, 4000, 2400, step=100)
+        slope = st.slider("Gradient Decline Slope (Degrees)", 0.2, 5.0, 1.2, step=0.1)
+        flow = st.slider("Seasonal Volumetric Influx (m³/s)", 5, 100, 35, step=5)
+        dams = st.slider("Stone Restriction Gates Count", 1, 6, 4)
+        
+    with col2:
+        v_theo, v_rest, p_drop, em_pot = simulate_teotihuacan_hydro_grid(av_len, slope, flow, dams)
+        
+        st.metric("Terminal Velocity at Channel Mouth", f"{v_theo:.2f} m/s")
+        st.metric("Restricted Jet Velocity through Dams", f"{v_rest:.2f} m/s")
+        st.metric("Venturi Kinetic Pressure Drop", f"{p_drop / 1e3:.2f} kPa")
+        st.metric("Generated Electro-Osmotic Potential", f"{em_pot:.2f} mV")
+        
+        # Venturi Gradient Plot
+        flow_x, press_y = generate_teotihuacan_pressure_curve(av_len, slope, dams)
+        fig, ax = plt.subplots(figsize=(6, 2.8))
+        ax.plot(flow_x, press_y, color='#F1C40F', linewidth=2.5, label='Pressure Differential')
+        ax.axvline(x=flow, color='#E74C3C', linestyle='--', label=f'Active Flow Node ({flow} m³/s)')
+        ax.set_title("Venturi Kinetic Gradient Shift vs. Volumetric Influx")
+        ax.set_xlabel("Volumetric Influx (m³ / second)")
+        ax.set_ylabel("Pressure Head Drop (kPa)")
+        ax.legend(loc='upper left', fontsize='small')
         ax.grid(True, alpha=0.2)
         st.pyplot(fig)
